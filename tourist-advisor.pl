@@ -1,6 +1,7 @@
 :- use_module(library(lists)).
 :- discontiguous handle_choice/1.
 :- discontiguous avoid_if/2.
+:- dynamic crowd_level/3.
 
 %  destination(Name, Region, Tags)
 
@@ -815,13 +816,12 @@ cheapest_option(Prefs, Month, Days, BestDest, LowestCost) :-
 
 % Infer traveler profile from answers
 % Infer traveler profile by dynamically scoring all profiles
-infer_profile(Answers, BestProfile) :-
+infer_profile(Answers, Style, BestProfile) :-
     findall(Score-Profile, (
         profile(Profile, PreferenceTags, _, IdealStyle, _),
         intersection(Answers, PreferenceTags, Matched),
         length(Matched, BaseScore),
-        % Apply a strong bonus if their requested style matches the profile
-        (member(IdealStyle, Answers) -> StyleBonus = 3 ; StyleBonus = 0),
+        (IdealStyle = Style -> StyleBonus = 3 ; StyleBonus = 0),        
         Score is BaseScore + StyleBonus,
         Score > 0
     ), ScoredProfiles),
@@ -1069,10 +1069,13 @@ handle_choice(5) :-
     nl,
     format("  --- TRAVELER PROFILE & RECOMMENDATIONS ---~n"),
     nl,
+    format("  Travel style (budget / mid / luxury):~n  > "),
+    read(Style),
+    nl,
     format("  Answer a few questions to find your travel profile.~n~n"),
     format("  What matters most to you? (pick all that apply as a list)~n"),
     format("  Options: [wine, beach, hiking, culture, nightlife, food,~n"),
-    format("            history, nature, romance, family, luxury, budget,~n"),
+    format("            history, nature, romance, family,~n"),
     format("            authentic, slow_travel, adventure, art]~n"),
     format("  > "),
     read(Interests),
@@ -1089,7 +1092,7 @@ handle_choice(5) :-
     read(Days),
     (   valid_month(Month), integer(Days), Days > 0
     ->  nl,
-        infer_profile(Interests, Profile),
+        infer_profile(Interests, Style, Profile),
         profile(Profile, PrefTags, AvoidTags, IdealStyle, ProfileNotes),
         format("  >>> Your profile: ~w~n", [Profile]),
         format("  >>> ~w~n", [ProfileNotes]),
@@ -1444,6 +1447,6 @@ continue_or_exit :-
     format("  [Enter 0 to return to menu, or 'exit' to quit]: "),
     read(K),
     (   K = exit -> handle_choice(0)
-    ;   K =:= 0  -> menu
+    ;   K == 0  -> menu
     ;   menu
     ).
